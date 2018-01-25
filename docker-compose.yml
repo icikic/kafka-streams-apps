@@ -1,0 +1,73 @@
+---
+version: '3.5'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:4.0.0
+    hostname: zookeeper
+    environment:
+      ZOOKEEPER_SERVERS: zookeeper:2181
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_MAX_CLIENT_CNXNS: 100
+    ports:
+      - "2181:2181"
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  kafka:
+    image: confluentinc/cp-kafka:4.0.0
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  score-generator:
+    image: kstreams:latest
+    hostname: score-generator
+    environment:
+      SCORE_GENERATOR_EVENTS_PER_SECOND: 10
+      SCORE_GENERATOR_RUN_TIME_IN_SECONDS: 600
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_ACKS: "all"
+      KAFKA_RETRIES: 0
+      KAFKA_BATCH_SIZE: 1000
+      KAFKA_LINGER_MS: 1
+      KAFKA_KEY_SERIALIZER: "org.apache.kafka.common.serialization.LongSerializer"
+      KAFKA_VALUE_SERIALIZER: "icikic.kstreams.serde.JsonSerializer"
+    command:
+      - bash
+      - -c
+      - |
+        dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
+        java -cp "/jars/kstreams-standalone.jar" -Dloader.main=icikic.kstreams.producer.ScoreProducer org.springframework.boot.loader.PropertiesLauncher
+    depends_on:
+      - zookeeper
+      - kafka
+
+  score-processor:
+    image: kstreams:latest
+    hostname: score-processor
+    environment:
+      KAFKA_STREAMS_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_STREAMS_APPLICATION_HOST: score-processor
+      KAFKA_STREAMS_APPLICATION_PORT: 8080
+    command:
+      - bash
+      - -c
+      - |
+        dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
+        java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar "/jars/kstreams-standalone.jar"
+    ports:
+      - "18080:8080"
+    depends_on:
+      - zookeeper
+      - kafka
