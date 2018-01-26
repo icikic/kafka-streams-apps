@@ -14,5 +14,3 @@ RUN set -ex && \
 
 
 COPY target/kstreams-*standalone.jar /jars/kstreams-standalone.jar
-COPY src/data/* /data/
-#COPY target/classes/config.yml /resources/config.yml
