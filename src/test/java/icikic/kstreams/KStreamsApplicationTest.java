@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 @RunWith(SpringJUnit4ClassRunner.class)
-public class KstreamsApplicationTests {
+public class KStreamsApplicationTest {
 
 	@Test
 	public void contextLoads() {
