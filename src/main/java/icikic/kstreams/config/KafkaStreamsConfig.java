@@ -7,12 +7,12 @@ import java.util.Properties;
 
 @Component
 @ConfigurationProperties("kafka.streams")
-public class KafkaStreamConfig {
+public class KafkaStreamsConfig {
     private Properties properties;
-    private String scoreTopic;
-    private String averageScoreStore;
-    private int averageWindowDurationInSeconds;
-    private int averageWindowAdvanceInSeconds;
+    private String scoresTopic;
+    private String averagesStore;
+    private int scoresWindowSizeInSeconds;
+    private int scoresWindowAdvanceInSeconds;
 
     public Properties getProperties() {
         return properties;
@@ -22,46 +22,46 @@ public class KafkaStreamConfig {
         this.properties = properties;
     }
 
-    public String getScoreTopic() {
-        return scoreTopic;
+    public String getScoresTopic() {
+        return scoresTopic;
     }
 
-    public void setScoreTopic(String scoreTopic) {
-        this.scoreTopic = scoreTopic;
+    public void setScoresTopic(String scoresTopic) {
+        this.scoresTopic = scoresTopic;
     }
 
-    public String getAverageScoreStore() {
-        return averageScoreStore;
+    public String getAveragesStore() {
+        return averagesStore;
     }
 
-    public void setAverageScoreStore(String store) {
-        this.averageScoreStore = store;
+    public void setAveragesStore(String store) {
+        this.averagesStore = store;
     }
 
-    public int getAverageWindowDurationInSeconds() {
-        return averageWindowDurationInSeconds;
+    public int getScoresWindowSizeInSeconds() {
+        return scoresWindowSizeInSeconds;
     }
 
-    public void setAverageWindowDurationInSeconds(int averageWindowDurationInSeconds) {
-        this.averageWindowDurationInSeconds = averageWindowDurationInSeconds;
+    public void setScoresWindowSizeInSeconds(int scoresWindowSizeInSeconds) {
+        this.scoresWindowSizeInSeconds = scoresWindowSizeInSeconds;
     }
 
-    public int getAverageWindowAdvanceInSeconds() {
-        return averageWindowAdvanceInSeconds;
+    public int getScoresWindowAdvanceInSeconds() {
+        return scoresWindowAdvanceInSeconds;
     }
 
-    public void setAverageWindowAdvanceInSeconds(int averageWindowAdvanceInSeconds) {
-        this.averageWindowAdvanceInSeconds = averageWindowAdvanceInSeconds;
+    public void setScoresWindowAdvanceInSeconds(int scoresWindowAdvanceInSeconds) {
+        this.scoresWindowAdvanceInSeconds = scoresWindowAdvanceInSeconds;
     }
 
     @Override
     public String toString() {
-        return "KafkaStreamsProperties{" +
+        return "KafkaStreamsConfig {" +
                 "properties=" + properties +
-                ", scoreTopic='" + scoreTopic + '\'' +
-                ", averageScoreStore='" + averageScoreStore + '\'' +
-                ", averageWindowDurationInSeconds=" + averageWindowDurationInSeconds +
-                ", averageWindowAdvanceInSeconds=" + averageWindowAdvanceInSeconds +
+                ", scoresTopic='" + scoresTopic + '\'' +
+                ", averagesStore='" + averagesStore + '\'' +
+                ", scoresWindowSizeInSeconds=" + scoresWindowSizeInSeconds +
+                ", scoresWindowAdvanceInSeconds=" + scoresWindowAdvanceInSeconds +
                 '}';
     }
 }

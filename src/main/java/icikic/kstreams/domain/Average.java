@@ -9,29 +9,32 @@ import static java.math.MathContext.DECIMAL32;
 
 /**
  */
-public class AverageScore {
-    public final long count;
-    public final BigDecimal sum;
+public class Average {
+    public static final Average ZERO = new Average(0, BigDecimal.ZERO);
 
-    public AverageScore() {
+    public final long count;
+    public final BigDecimal avg;
+
+    public Average() {
         this(0, BigDecimal.ZERO);
     }
 
-    public AverageScore(@JsonProperty("count") final long count,
-                        @JsonProperty("sum") final BigDecimal sum) {
+    public Average(@JsonProperty("count") final long count,
+                   @JsonProperty("avg") final BigDecimal avg) {
 
         this.count = count;
-        this.sum   = sum;
+        this.avg   = avg;
     }
 
-    public AverageScore update(Score score) {
-        final BigDecimal newSum   = sum.add(valueOf(score.score), DECIMAL32);
+    public Average update(Score score) {
         final long       newCount = count + 1;
-        return new AverageScore(newCount, newSum);
+        // https://en.wikipedia.org/wiki/Moving_average#Cumulative_moving_average
+        final BigDecimal newAvg   = avg.add((valueOf(score.score).subtract(avg)).divide(valueOf(newCount), DECIMAL32), DECIMAL32);
+        return new Average(newCount, newAvg);
     }
 
     public BigDecimal get() {
-        return count != 0 ? sum.divide(valueOf(count), DECIMAL32) : BigDecimal.ZERO;
+        return avg;
     }
 
     @Override

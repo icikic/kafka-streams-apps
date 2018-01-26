@@ -25,6 +25,7 @@ public class ScoreService implements icikic.kstreams.service.Service {
     public void start() {
         this.kafkaStreams.cleanUp();
         this.kafkaStreams.start();
+
         LOGGER.info("[{}] STARTED", kafkaStreams);
     }
 
@@ -33,5 +34,9 @@ public class ScoreService implements icikic.kstreams.service.Service {
     public void stop() {
         this.kafkaStreams.close();
         LOGGER.info("[{}] CLOSED", kafkaStreams);
+    }
+
+    public KafkaStreams getKafkaStreams() {
+        return kafkaStreams;
     }
 }

@@ -18,32 +18,30 @@ import org.springframework.context.annotation.Configuration;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
-public class ScoreStreamConfig {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ScoreStreamConfig.class);
+public class ScoreServiceConfig {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScoreServiceConfig.class);
 
-    private KafkaStreamConfig kafkaStreamConfig;
+    private KafkaStreamsConfig kafkaStreamsConfig;
 
-    public ScoreStreamConfig(final KafkaStreamConfig props) {
-        this.kafkaStreamConfig = props;
+    public ScoreServiceConfig(final KafkaStreamsConfig props) {
+        this.kafkaStreamsConfig = props;
     }
 
     @Bean
-    public KafkaStreams movingAverage() {
-        LOGGER.debug("Properties {}", kafkaStreamConfig);
+    public KafkaStreams buildKafkaStreams() {
         final StreamsBuilder builder = new StreamsBuilder();
-        final KStream<Long, Score> scores = builder.stream(kafkaStreamConfig.getScoreTopic(), Consumed.with(Serdes.Long(), new JsonSerde<>(Score.class)));
+        final KStream<Long, Score> scores = builder.stream(kafkaStreamsConfig.getScoresTopic(), Consumed.with(Serdes.Long(), new JsonSerde<>(Score.class)));
 
         scores.groupByKey()
-                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(kafkaStreamConfig.getAverageWindowDurationInSeconds()))
-                        .advanceBy(TimeUnit.SECONDS.toMillis(kafkaStreamConfig.getAverageWindowAdvanceInSeconds())))
+                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(kafkaStreamsConfig.getScoresWindowSizeInSeconds()))
+                        .advanceBy(TimeUnit.SECONDS.toMillis(kafkaStreamsConfig.getScoresWindowAdvanceInSeconds())))
                 .aggregate(
                         Average::new,
                         (key, value, aggregate) -> aggregate.update(value),
-                        Materialized.<Long, Average, WindowStore<Bytes, byte[]>>as(kafkaStreamConfig.getAverageScoreStore())
+                        Materialized.<Long, Average, WindowStore<Bytes, byte[]>>as(kafkaStreamsConfig.getAveragesStore())
                                 .withKeySerde(Serdes.Long())
                                 .withValueSerde(new JsonSerde<>(Average.class)));
 
-        return new KafkaStreams(builder.build(), kafkaStreamConfig.getProperties());
+        return new KafkaStreams(builder.build(), kafkaStreamsConfig.getProperties());
     }
-
 }

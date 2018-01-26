@@ -3,16 +3,19 @@ package icikic.kstreams.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 
-public class AverageScoreResponse {
+import static java.math.RoundingMode.HALF_EVEN;
+
+public class WindowedAverage {
 
     private final long playerId;
     private final Instant from;
     private final Instant to;
     private final BigDecimal average;
 
-    public AverageScoreResponse(Long playerId, Instant from, Instant to, AverageScore average) {
+    public WindowedAverage(Long playerId, Instant from, Instant to, Average average) {
         this.playerId = playerId;
         this.from = from;
         this.to = to;
@@ -34,6 +37,6 @@ public class AverageScoreResponse {
     }
 
     public BigDecimal getAverage() {
-        return average;
+        return average.setScale(4, HALF_EVEN);
     }
 }

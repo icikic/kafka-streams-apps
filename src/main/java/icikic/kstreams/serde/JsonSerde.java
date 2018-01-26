@@ -1,7 +1,7 @@
 package icikic.kstreams.serde;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import icikic.kstreams.domain.AverageScore;
+import icikic.kstreams.domain.Average;
 import icikic.kstreams.domain.Score;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
@@ -65,6 +65,6 @@ public class JsonSerde<T> implements Serde<T> {
     public static class ScoreSerde extends JsonSerde<Score> {
     }
 
-    public static class AverageScoreSerde extends JsonSerde<AverageScore> {
+    public static class AverageScoreSerde extends JsonSerde<Average> {
     }
 }
