@@ -31,7 +31,7 @@ public class AverageScore {
     }
 
     public BigDecimal get() {
-        return sum.divide(valueOf(count), DECIMAL32);
+        return count != 0 ? sum.divide(valueOf(count), DECIMAL32) : BigDecimal.ZERO;
     }
 
     @Override

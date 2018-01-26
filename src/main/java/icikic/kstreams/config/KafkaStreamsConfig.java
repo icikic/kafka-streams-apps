@@ -7,14 +7,12 @@ import java.util.Properties;
 
 @Component
 @ConfigurationProperties("kafka.streams")
-public class KafkaStreamsProperties {
+public class KafkaStreamConfig {
     private Properties properties;
     private String scoreTopic;
-    private String averageScoreTopic;
+    private String averageScoreStore;
     private int averageWindowDurationInSeconds;
     private int averageWindowAdvanceInSeconds;
-    private String applicationHost;
-    private int applicationPort;
 
     public Properties getProperties() {
         return properties;
@@ -32,12 +30,12 @@ public class KafkaStreamsProperties {
         this.scoreTopic = scoreTopic;
     }
 
-    public String getAverageScoreTopic() {
-        return averageScoreTopic;
+    public String getAverageScoreStore() {
+        return averageScoreStore;
     }
 
-    public void setAverageScoreTopic(String averageScoreTopic) {
-        this.averageScoreTopic = averageScoreTopic;
+    public void setAverageScoreStore(String store) {
+        this.averageScoreStore = store;
     }
 
     public int getAverageWindowDurationInSeconds() {
@@ -56,28 +54,12 @@ public class KafkaStreamsProperties {
         this.averageWindowAdvanceInSeconds = averageWindowAdvanceInSeconds;
     }
 
-    public String getApplicationHost() {
-        return applicationHost;
-    }
-
-    public void setApplicationHost(String applicationHost) {
-        this.applicationHost = applicationHost;
-    }
-
-    public int getApplicationPort() {
-        return applicationPort;
-    }
-
-    public void setApplicationPort(int applicationPort) {
-        this.applicationPort = applicationPort;
-    }
-
     @Override
     public String toString() {
         return "KafkaStreamsProperties{" +
                 "properties=" + properties +
                 ", scoreTopic='" + scoreTopic + '\'' +
-                ", averageScoreTopic='" + averageScoreTopic + '\'' +
+                ", averageScoreStore='" + averageScoreStore + '\'' +
                 ", averageWindowDurationInSeconds=" + averageWindowDurationInSeconds +
                 ", averageWindowAdvanceInSeconds=" + averageWindowAdvanceInSeconds +
                 '}';
