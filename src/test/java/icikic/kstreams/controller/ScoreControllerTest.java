@@ -10,6 +10,8 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.rule.KafkaEmbedded;
@@ -23,13 +25,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoField;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+import static java.time.LocalDateTime.now;
+import static java.time.ZoneId.systemDefault;
+import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
 import static org.apache.kafka.streams.state.StreamsMetadata.NOT_AVAILABLE;
@@ -54,6 +56,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
         ScoreControllerTest.class})
 @WebAppConfiguration
 public class ScoreControllerTest extends AbstractTestExecutionListener {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScoreControllerTest.class);
     private static final String SCORES_TOPIC = "SCORES";
     private static final double EPSILON = 10e-6;
 
@@ -78,9 +81,9 @@ public class ScoreControllerTest extends AbstractTestExecutionListener {
     public void shouldReturnMovingAverage() throws Exception {
         final long windowDurationInMillis = config.getScoresWindowSizeInSeconds() * 1000;
         final long advanceByInMillis = config.getScoresWindowAdvanceInSeconds() * 1000;
-        final Instant nowRounded = LocalDateTime.now().with(ChronoField.SECOND_OF_MINUTE, 0).atZone(ZoneId.systemDefault()).toInstant();
 
-        final long t0 = nowRounded.toEpochMilli() - windowDurationInMillis;
+        final Instant now = now().truncatedTo(MINUTES).plusSeconds(1).atZone(systemDefault()).toInstant();
+        final long t0 = now.toEpochMilli() - windowDurationInMillis;
         final long t1 = t0 + advanceByInMillis;
         final long t2 = t1 + advanceByInMillis;
         final long t3 = t2 + advanceByInMillis;
@@ -106,11 +109,9 @@ public class ScoreControllerTest extends AbstractTestExecutionListener {
                 ProducerRecord<Long, Score> record = new ProducerRecord<>(SCORES_TOPIC,null, s.timestamp, s.playerId, s);
                 producer.send(record, (metadata, exception) -> {
                     if (exception != null) {
-                        System.out.println("Exception while sending kafka message." + exception);
-                        throw new RuntimeException("Exception while sending kafka message.", exception);
+                        throw new RuntimeException("Exception while sending kafka record", exception);
                     } else {
-                        System.out.println("Successfully sent to " +
-                                metadata.topic() + "," + metadata.partition() + "," + metadata.offset());
+                        LOGGER.info("Successfully sent {} to {}, {}, {}", s, metadata.topic(), metadata.partition(), metadata.offset());
                     }
                 });
             });
