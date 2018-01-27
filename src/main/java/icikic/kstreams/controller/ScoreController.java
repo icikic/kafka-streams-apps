@@ -52,9 +52,9 @@ public class ScoreController {
     public ResponseEntity<List<WindowedAverage>> getAverageScoreForAll(
             @RequestParam(value = "at", required = false) final Long atTime) {
 
-        final long asOf  = atTime == null ? currentTimeMillis() : atTime;
-        final long start = asOf - config.getScoresWindowSizeInSeconds() * 1000;
-        final long end   = start + config.getScoresWindowAdvanceInSeconds() * 1000;
+        final long time = atTime == null ? currentTimeMillis() : atTime;
+        final long start = startTime(time);
+        final long end   = endTime(start);
         final List<WindowedAverage> result = fetchAveragesForAllPlayers(start, end);
 
         return ResponseEntity.ok(result);
@@ -75,9 +75,9 @@ public class ScoreController {
                     .pathSegment(valueOf(player)).build();
             return httpClient.getForEntity(uri.toUri(), WindowedAverage.class);
         } else {
-            final long asOf  = atTime == null ? currentTimeMillis() : atTime;
-            final long start = asOf - config.getScoresWindowSizeInSeconds() * 1000;
-            final long end   = start + config.getScoresWindowAdvanceInSeconds() * 1000;
+            final long time = atTime == null ? currentTimeMillis() : atTime;
+            final long start = startTime(time);
+            final long end   = endTime(start);
             final WindowedAverage average = fetchAverageForPlayer(player, start, end);
 
             return ResponseEntity.ok(average);
@@ -115,4 +115,14 @@ public class ScoreController {
         return new HostInfo(hostAndPort[0], parseInt(hostAndPort[1]));
     }
 
+    private long startTime(final long time) {
+        if (time % (config.getScoresWindowAdvanceInMillis()) == 0) {
+            return time - config.getScoresWindowSizeInMillis() + 1;
+        }
+        return time - config.getScoresWindowSizeInMillis();
+    }
+
+    private long endTime(final long start) {
+        return start + config.getScoresWindowAdvanceInMillis() - 1; // store.fetch in inclusive on both boundaries, so we'll take 1ms from end boundary
+    }
 }
