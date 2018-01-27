@@ -5,7 +5,6 @@ import icikic.kstreams.domain.Average;
 import icikic.kstreams.domain.WindowedAverage;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.state.*;
@@ -87,25 +86,26 @@ public class ScoreController {
 
     private List<WindowedAverage> fetchAveragesForAllPlayers(final long from, final long to) {
 
-        final ReadOnlyWindowStore<Long, Average> store = streams.store(config.getAveragesStore(), QueryableStoreTypes.<Long, Average>windowStore());
-        final KeyValueIterator<Windowed<Long>, Average> averages = store.fetch(0L, Long.MAX_VALUE, from, to);
         final Map<Long, LinkedList<WindowedAverage>> result = new HashMap<>();
-        averages.forEachRemaining(kv -> {
-            result.computeIfAbsent(kv.key.key(), k -> new LinkedList<>()).add(
-                    new WindowedAverage(kv.key.key(), ofEpochMilli(kv.key.window().start()), ofEpochMilli(kv.key.window().end()), kv.value));
-        });
-
+        final ReadOnlyWindowStore<Long, Average> store = streams.store(config.getAveragesStore(), QueryableStoreTypes.<Long, Average>windowStore());
+        try (final KeyValueIterator<Windowed<Long>, Average> averages = store.fetch(0L, Long.MAX_VALUE, from, to)) {
+            averages.forEachRemaining(kv -> {
+                result.computeIfAbsent(kv.key.key(), k -> new LinkedList<>()).add(
+                        new WindowedAverage(kv.key.key(), ofEpochMilli(kv.key.window().start()), ofEpochMilli(kv.key.window().end()), kv.value));
+            });
+        }
         return result.values().stream().map(LinkedList::getFirst).collect(Collectors.toList());
     }
 
     private WindowedAverage fetchAverageForPlayer(final Long key, long from, long to) {
 
-        final ReadOnlyWindowStore<Long, Average> store = streams.store(config.getAveragesStore(), QueryableStoreTypes.<Long, Average>windowStore());
-        final WindowStoreIterator<Average> averages = store.fetch(key, from, to);
         final LinkedList<WindowedAverage> result = new LinkedList<>();
-        averages.forEachRemaining(kv -> {
-            result.add(new WindowedAverage(key, ofEpochMilli(kv.key), ofEpochMilli(kv.key).plusSeconds(config.getScoresWindowSizeInSeconds()), kv.value));
-        });
+        final ReadOnlyWindowStore<Long, Average> store = streams.store(config.getAveragesStore(), QueryableStoreTypes.<Long, Average>windowStore());
+        try (final WindowStoreIterator<Average> averages = store.fetch(key, from, to)) {
+            averages.forEachRemaining(kv -> {
+                result.add(new WindowedAverage(key, ofEpochMilli(kv.key), ofEpochMilli(kv.key).plusSeconds(config.getScoresWindowSizeInSeconds()), kv.value));
+            });
+        }
         return result.isEmpty() ? new WindowedAverage(key, ofEpochMilli(from), ofEpochMilli(to), ZERO) : result.getFirst();
     }
 

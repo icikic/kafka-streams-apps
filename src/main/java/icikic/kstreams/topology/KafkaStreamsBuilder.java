@@ -1,5 +1,6 @@
-package icikic.kstreams.config;
+package icikic.kstreams.topology;
 
+import icikic.kstreams.config.KafkaStreamsConfig;
 import icikic.kstreams.domain.Average;
 import icikic.kstreams.domain.Score;
 import icikic.kstreams.serde.JsonSerde;
@@ -18,12 +19,12 @@ import org.springframework.context.annotation.Configuration;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
-public class ScoreServiceConfig {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ScoreServiceConfig.class);
+public class KafkaStreamsBuilder {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaStreamsBuilder.class);
 
     private KafkaStreamsConfig kafkaStreamsConfig;
 
-    public ScoreServiceConfig(final KafkaStreamsConfig props) {
+    public KafkaStreamsBuilder(final KafkaStreamsConfig props) {
         this.kafkaStreamsConfig = props;
     }
 
