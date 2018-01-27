@@ -31,7 +31,7 @@ services:
     hostname: score-generator
     environment:
       SCORE_GENERATOR_EVENTS_PER_SECOND: 10
-      SCORE_GENERATOR_RUN_TIME_IN_SECONDS: 10
+      SCORE_GENERATOR_RUN_TIME_IN_SECONDS: 3600
       KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
       KAFKA_ACKS: "all"
       KAFKA_RETRIES: 0
