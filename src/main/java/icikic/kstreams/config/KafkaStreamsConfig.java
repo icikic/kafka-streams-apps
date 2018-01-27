@@ -11,8 +11,8 @@ public class KafkaStreamsConfig {
     private Properties properties;
     private String scoresTopic;
     private String averagesStore;
-    private int scoresWindowSizeInSeconds;
-    private int scoresWindowAdvanceInSeconds;
+    private long scoresWindowSizeInSeconds;
+    private long scoresWindowAdvanceInSeconds;
 
     public Properties getProperties() {
         return properties;
@@ -38,7 +38,7 @@ public class KafkaStreamsConfig {
         this.averagesStore = store;
     }
 
-    public int getScoresWindowSizeInSeconds() {
+    public long getScoresWindowSizeInSeconds() {
         return scoresWindowSizeInSeconds;
     }
 
@@ -46,12 +46,20 @@ public class KafkaStreamsConfig {
         this.scoresWindowSizeInSeconds = scoresWindowSizeInSeconds;
     }
 
-    public int getScoresWindowAdvanceInSeconds() {
+    public long getScoresWindowAdvanceInSeconds() {
         return scoresWindowAdvanceInSeconds;
     }
 
     public void setScoresWindowAdvanceInSeconds(int scoresWindowAdvanceInSeconds) {
         this.scoresWindowAdvanceInSeconds = scoresWindowAdvanceInSeconds;
+    }
+
+    public long getScoresWindowAdvanceInMillis() {
+        return getScoresWindowAdvanceInSeconds() * 1000;
+    }
+
+    public long getScoresWindowSizeInMillis() {
+        return getScoresWindowSizeInSeconds() * 1000;
     }
 
     @Override

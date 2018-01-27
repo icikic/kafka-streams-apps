@@ -1,6 +1,5 @@
-package icikic.kstreams.controller;
+package icikic.kstreams;
 
-import icikic.kstreams.KstreamsApplication;
 import icikic.kstreams.config.KafkaStreamsConfig;
 import icikic.kstreams.domain.Score;
 import icikic.kstreams.service.ScoreService;
@@ -32,6 +31,7 @@ import java.util.Properties;
 import static java.time.LocalDateTime.now;
 import static java.time.ZoneId.systemDefault;
 import static java.time.temporal.ChronoUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.kafka.clients.producer.ProducerConfig.*;
 import static org.apache.kafka.streams.state.StreamsMetadata.NOT_AVAILABLE;
@@ -53,10 +53,10 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
         })
 @TestExecutionListeners(listeners = {
         DependencyInjectionTestExecutionListener.class,
-        ScoreControllerTest.class})
+        MovingAverageUsingStreamsDslTest.class})
 @WebAppConfiguration
-public class ScoreControllerTest extends AbstractTestExecutionListener {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ScoreControllerTest.class);
+public class MovingAverageUsingStreamsDslTest extends AbstractTestExecutionListener {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MovingAverageUsingStreamsDslTest.class);
     private static final String SCORES_TOPIC = "SCORES";
     private static final double EPSILON = 10e-6;
 
@@ -79,8 +79,8 @@ public class ScoreControllerTest extends AbstractTestExecutionListener {
 
     @Test
     public void shouldReturnMovingAverage() throws Exception {
-        final long windowDurationInMillis = config.getScoresWindowSizeInSeconds() * 1000;
-        final long advanceByInMillis = config.getScoresWindowAdvanceInSeconds() * 1000;
+        final long windowDurationInMillis = config.getScoresWindowSizeInMillis();
+        final long advanceByInMillis = config.getScoresWindowAdvanceInMillis();
 
         final Instant now = now().truncatedTo(MINUTES).plusSeconds(1).atZone(systemDefault()).toInstant();
         final long t0 = now.toEpochMilli() - windowDurationInMillis;
@@ -121,7 +121,7 @@ public class ScoreControllerTest extends AbstractTestExecutionListener {
         await().atMost(5, SECONDS).until(() -> !NOT_AVAILABLE.equals(
                 scoreService.getKafkaStreams().allMetadataForStore(config.getAveragesStore())));
 
-        await().atMost(5, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
+        await().atMost(5, HOURS).pollInterval(1, SECONDS).untilAsserted(() -> {
             // T0
             assertMovingAverageForPlayerAtTime(1, t0, 100);
             assertMovingAverageForPlayerAtTime(2, t0, 0);
