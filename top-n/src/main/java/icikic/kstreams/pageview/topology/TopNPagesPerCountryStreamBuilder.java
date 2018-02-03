@@ -124,8 +124,7 @@ public class TopNPagesPerCountryStreamBuilder {
                         if (record == null) {
                             break;
                         }
-                        sb.append(record.pageView.page);
-                        sb.append("\n");
+                        sb.append("('").append(record.pageView.page).append("',").append(record.count).append(")").append("\n");
                     }
                     return sb.toString();
                 });

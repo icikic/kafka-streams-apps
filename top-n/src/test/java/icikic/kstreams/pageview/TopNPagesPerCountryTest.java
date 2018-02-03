@@ -155,7 +155,7 @@ public class TopNPagesPerCountryTest extends AbstractTestExecutionListener  {
 
                 // /checkout page content should be filtered out due to content size
                 // /home would be the forth page, but we've configured top-3
-                expected.put(country, Arrays.asList("/product", "/search", "/add-to-cart"));
+                expected.put(country, Arrays.asList("('/product',3)", "('/search',2)", "('/add-to-cart',1)"));
 
             });
 
