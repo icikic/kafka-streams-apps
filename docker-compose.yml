@@ -21,13 +21,15 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CREATE_TOPICS: "SCORES:1:1"
+      KAFKA_CREATE_TOPICS: "SCORES:1:1,PAGE_VIEWS:1:1,PAGE_UPDATES:1:1,AVERAGE_SCORES_PER_PLAYER:1:1,TOP_PAGES_PER_COUNTRY:1:1"
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     ports:
       - "9092:9092"
 
   score-generator:
-    image: kstreams:latest
+    image: moving-average:latest
+    build:
+      context: ./moving-average
     hostname: score-generator
     environment:
       SCORE_GENERATOR_EVENTS_PER_SECOND: 10
@@ -44,29 +46,100 @@ services:
       - -c
       - |
         dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
-        java -cp "/jars/kstreams-standalone.jar" -Dloader.main=icikic.kstreams.producer.ScoreProducer org.springframework.boot.loader.PropertiesLauncher
+        sleep 20
+        java -cp "/jars/moving-average-standalone.jar" -Dloader.main=icikic.kstreams.movavg.producer.ScoreProducer org.springframework.boot.loader.PropertiesLauncher
     depends_on:
       - zookeeper
       - kafka
 
   score-processor:
-    image: kstreams:latest
+    image: moving-average:latest
+    build:
+      context: ./moving-average
     hostname: score-processor
     restart: always
     environment:
-      KAFKA_STREAMS_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
-      KAFKA_STREAMS_PROPERTIES_APPLICATION_SERVER: score-processor:8080
+      KAFKA_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_PROPERTIES_APPLICATION_SERVER: score-processor:8080
     command:
       - bash
       - -c
       - |
         dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
-        java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar "/jars/kstreams-standalone.jar"
+        sleep 20
+        java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar "/jars/moving-average-standalone.jar"
     ports:
       - "18080:8080"
     depends_on:
       - zookeeper
       - kafka
+
+  pageview-processor:
+      image: top-n:latest
+      build:
+        context: ./top-n
+      hostname: pageview-processor
+      restart: always
+      environment:
+        KAFKA_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
+      command:
+        - bash
+        - -c
+        - |
+          dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
+          sleep 20
+          java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar "/jars/top-n-standalone.jar"
+      depends_on:
+        - zookeeper
+        - kafka
+
+  pageview-generator:
+      image: top-n:latest
+      build:
+        context: ./top-n
+      hostname: pageview-generator
+      environment:
+        PAGEVIEW_GENERATOR_EVENTS_PER_SECOND: 10
+        PAGEVIEW_GENERATOR_RUN_TIME_IN_SECONDS: 60
+        KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+        KAFKA_ACKS: "all"
+        KAFKA_RETRIES: 0
+        KAFKA_BATCH_SIZE: 1000
+        KAFKA_LINGER_MS: 1
+        KAFKA_KEY_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
+        KAFKA_VALUE_SERIALIZER: "icikic.kstreams.serde.JsonSerializer"
+      command:
+        - bash
+        - -c
+        - |
+          dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
+          sleep 20
+          java -cp "/jars/top-n-standalone.jar" -Dloader.main=icikic.kstreams.pageview.producer.PageViewProducer org.springframework.boot.loader.PropertiesLauncher
+      depends_on:
+        - zookeeper
+        - kafka
+
+  pageview-consumer:
+        image: top-n:latest
+        build:
+          context: ./top-n
+        hostname: pageview-consumer
+        environment:
+          KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+          KAFKA_GROUP_ID: "top-pages-per-country"
+          KAFKA_CLIENT_ID: "top-pages-per-country-client"
+          KAFKA_AUTO_OFFSET_RESET: "earliest"
+          PAGEVIEW_CONSUMER_RUN_TIME_IN_SECONDS: 3600
+        command:
+          - bash
+          - -c
+          - |
+            dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
+            sleep 20
+            java -cp "/jars/top-n-standalone.jar" -Dloader.main=icikic.kstreams.pageview.consumer.TopNPagesPerCountryConsumer org.springframework.boot.loader.PropertiesLauncher
+        depends_on:
+          - zookeeper
+          - kafka
 
 volumes:
   zookeeper:

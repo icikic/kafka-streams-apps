@@ -1,0 +1,11 @@
+US
+GB
+ES
+NZ
+CA
+DK
+SE
+NO
+CH
+FR
+RU

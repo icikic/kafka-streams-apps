@@ -3,27 +3,33 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>icikic</groupId>
-	<artifactId>kstreams</artifactId>
+	<groupId>icikic.kstreams</groupId>
+	<artifactId>kstreams-parent</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>jar</packaging>
+	<packaging>pom</packaging>
 
-	<name>kstreams</name>
+	<name>kafka-streams-apps</name>
 
-	<repositories>
-		<repository>
-			<id>confluent</id>
-			<url>http://packages.confluent.io/maven/</url>
-		</repository>
-	</repositories>
+	<!--<repositories>-->
+		<!--<repository>-->
+			<!--<id>confluent</id>-->
+			<!--<url>http://packages.confluent.io/maven/</url>-->
+		<!--</repository>-->
+	<!--</repositories>-->
 
 
-	<pluginRepositories>
-		<pluginRepository>
-			<id>confluent</id>
-			<url>http://packages.confluent.io/maven/</url>
-		</pluginRepository>
-	</pluginRepositories>
+	<!--<pluginRepositories>-->
+		<!--<pluginRepository>-->
+			<!--<id>confluent</id>-->
+			<!--<url>http://packages.confluent.io/maven/</url>-->
+		<!--</pluginRepository>-->
+	<!--</pluginRepositories>-->
+
+	<modules>
+		<module>top-n</module>
+		<module>moving-average</module>
+		<module>kstream-commons</module>
+	</modules>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -45,6 +51,9 @@
         <guava.version>23.0</guava.version>
         <rocksdb.version>5.7.3</rocksdb.version>
         <jackson.version>2.8.10</jackson.version>
+        <algebird.version>0.13.0</algebird.version>
+        <kafka.scala.version>2.12</kafka.scala.version>
+
     </properties>
 
 	<dependencyManagement>
@@ -124,6 +133,12 @@
 			<version>${guava.version}</version>
 		</dependency>
 
+        <dependency>
+            <groupId>com.twitter</groupId>
+            <artifactId>algebird-core_${kafka.scala.version}</artifactId>
+            <version>${algebird.version}</version>
+        </dependency>
+
 		<!-- Logging -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -171,12 +186,90 @@
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka-test</artifactId>
 			<version>${spring-kafka-test.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka_2.11</artifactId>
+                </exclusion>
+            </exclusions>
 			<scope>test</scope>
 		</dependency>
-
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.12</artifactId>
+            <version>1.0.0</version>
+            <scope>test</scope>
+        </dependency>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka_2.12</artifactId>
+			<version>1.0.0</version>
+			<classifier>test</classifier>
+			<scope>compile</scope>
+			<exclusions>
+				<exclusion>
+					<artifactId>slf4j-log4j12</artifactId>
+					<groupId>org.slf4j</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
 	</dependencies>
 
+
 	<build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <finalName>${project.name}-${project.version}-standalone</finalName>
+                        <layout>ZIP</layout>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>com.spotify</groupId>
+                    <artifactId>dockerfile-maven-plugin</artifactId>
+                    <version>${dockerfile-maven-plugin.version}</version>
+                    <executions>
+                        <execution>
+                            <id>default</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                                <goal>tag</goal>
+                            </goals>
+                            <configuration>
+                                <tag>latest</tag>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>build-version</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>tag</goal>
+                            </goals>
+                            <configuration>
+                                <tag>${project.version}</tag>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <repository>${project.name}</repository>
+                        <buildDirectory>${project.build.directory}/docker-info</buildDirectory>
+                        <pullNewerImage>true</pullNewerImage>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -198,56 +291,6 @@
                     </includes>
                 </configuration>
             </plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-				<version>${spring-boot.version}</version>
-				<executions>
-					<execution>
-						<goals>
-							<goal>repackage</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<finalName>${project.name}-${project.version}-standalone</finalName>
-					<layout>ZIP</layout>
-				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>com.spotify</groupId>
-				<artifactId>dockerfile-maven-plugin</artifactId>
-				<version>${dockerfile-maven-plugin.version}</version>
-				<executions>
-					<execution>
-						<id>default</id>
-						<phase>package</phase>
-						<goals>
-							<goal>build</goal>
-							<goal>tag</goal>
-						</goals>
-						<configuration>
-							<tag>latest</tag>
-						</configuration>
-					</execution>
-					<execution>
-						<id>build-version</id>
-						<phase>package</phase>
-						<goals>
-							<goal>tag</goal>
-						</goals>
-						<configuration>
-							<tag>${project.version}</tag>
-						</configuration>
-					</execution>
-				</executions>
-				<configuration>
-					<repository>${project.name}</repository>
-					<buildDirectory>${project.build.directory}/docker-info</buildDirectory>
-					<pullNewerImage>true</pullNewerImage>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 
