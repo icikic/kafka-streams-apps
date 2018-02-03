@@ -82,6 +82,10 @@ services:
       restart: always
       environment:
         KAFKA_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
+        TOPN_REQUESTS_PER_SECOND_THRESHOLD: 100
+        TOPN_PAGE_SIZE_THRESHOLD: 10
+        TOPN_TIME_BUCKET_IN_SECONDS: 30
+        TOPN_N: 5
       command:
         - bash
         - -c
