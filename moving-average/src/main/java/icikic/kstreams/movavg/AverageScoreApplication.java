@@ -12,6 +12,4 @@ public class AverageScoreApplication {
 		SpringApplication.run(AverageScoreApplication.class, args);
 	}
 
-
-
 }

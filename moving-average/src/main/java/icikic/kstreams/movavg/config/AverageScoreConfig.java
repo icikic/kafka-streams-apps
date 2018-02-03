@@ -4,27 +4,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConfigurationProperties("scores")
-public class ScoreStreamConfig {
-    private String topic;
-    private String averagesStoreName;
+@ConfigurationProperties("moving.average")
+public class AverageScoreConfig {
+    private String scoreTopic;
+    private String averageScoreStoreName;
     private long windowSizeInSeconds;
     private long windowAdvanceInSeconds;
 
-    public String getTopic() {
-        return topic;
+    public String getScoreTopic() {
+        return scoreTopic;
     }
 
-    public void setTopic(String topic) {
-        this.topic = topic;
+    public void setScoreTopic(String scoreTopic) {
+        this.scoreTopic = scoreTopic;
     }
 
-    public String getAveragesStoreName() {
-        return averagesStoreName;
+    public String getAverageScoreStoreName() {
+        return averageScoreStoreName;
     }
 
-    public void setAveragesStoreName(String store) {
-        this.averagesStoreName = store;
+    public void setAverageScoreStoreName(String store) {
+        this.averageScoreStoreName = store;
     }
 
     public long getWindowSizeInSeconds() {
@@ -54,8 +54,8 @@ public class ScoreStreamConfig {
     @Override
     public String toString() {
         return "ScoreStreamConfig{" +
-                "topic='" + topic + '\'' +
-                ", averagesStoreName='" + averagesStoreName + '\'' +
+                "scoreTopic='" + scoreTopic + '\'' +
+                ", averageScoreStoreName='" + averageScoreStoreName + '\'' +
                 ", windowSizeInSeconds=" + windowSizeInSeconds +
                 ", windowAdvanceInSeconds=" + windowAdvanceInSeconds +
                 '}';

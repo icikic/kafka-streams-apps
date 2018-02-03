@@ -1,12 +1,10 @@
 package icikic.kstreams.pageview;
 
-import com.google.common.collect.Sets;
 import icikic.kstreams.pageview.domain.PageUpdate;
 import icikic.kstreams.pageview.domain.PageView;
 import icikic.kstreams.serde.JsonSerializer;
 import icikic.kstreams.service.KStreamsLifecycle;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -17,8 +15,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.kstream.internals.WindowedDeserializer;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,24 +28,24 @@ import org.springframework.test.context.TestExecutionListeners;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.AbstractTestExecutionListener;
 import org.springframework.test.context.support.DependencyInjectionTestExecutionListener;
-import scala.collection.immutable.Page;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static icikic.kstreams.pageview.producer.PageViewProducer.send;
 import static java.util.Collections.singleton;
-import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.assertThat;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(classes = TopNPagesPerCountryApplication.class,
         properties = {
-                "kafka.properties.bootstrap.servers=${spring.embedded.kafka.brokers}"
+                "kafka.properties.bootstrap.servers=${spring.embedded.kafka.brokers}",
+                "top-n.requestsPerSecondThreshold=10",
+                "top-n.pageSizeThreshold=40",
+                "top-n.timeBucketInSeconds=10",
+                "top-n.N=3"
         })
 @TestExecutionListeners(listeners = {
         DependencyInjectionTestExecutionListener.class,
@@ -158,7 +154,8 @@ public class TopNPagesPerCountryTest extends AbstractTestExecutionListener  {
                 send(pvProducer, PAGE_VIEWS_TOPIC, user, new PageView("/checkout", user, country));
 
                 // /checkout page content should be filtered out due to content size
-                expected.put(country, Arrays.asList("/product", "/search", "/add-to-cart", "/home"));
+                // /home would be the forth page, but we've configured top-3
+                expected.put(country, Arrays.asList("/product", "/search", "/add-to-cart"));
 
             });
 

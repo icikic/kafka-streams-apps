@@ -1,7 +1,7 @@
 package icikic.kstreams.movavg.topology;
 
 import icikic.kstreams.config.KafkaConfig;
-import icikic.kstreams.movavg.config.ScoreStreamConfig;
+import icikic.kstreams.movavg.config.AverageScoreConfig;
 import icikic.kstreams.movavg.domain.Average;
 import icikic.kstreams.movavg.domain.Score;
 import icikic.kstreams.serde.JsonSerde;
@@ -35,28 +35,28 @@ public class KafkaStreamsProcessorApiBuilder {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaStreamsProcessorApiBuilder.class);
 
     private final KafkaConfig kafkaConfig;
-    private final ScoreStreamConfig scoreConfig;
+    private final AverageScoreConfig avgScoreConfig;
 
     public KafkaStreamsProcessorApiBuilder(final KafkaConfig kafkaConfig,
-                                           final ScoreStreamConfig scoreConfig) {
+                                           final AverageScoreConfig avgScoreConfig) {
         this.kafkaConfig = kafkaConfig;
-        this.scoreConfig = scoreConfig;
+        this.avgScoreConfig = avgScoreConfig;
     }
 
     @Bean(name = "MovingAverageStream")
     public KafkaStreams buildKafkaStreams() {
         final Topology topology = new Topology();
-        final TimeWindows windows = TimeWindows.of(scoreConfig.getWindowSizeInMillis()).advanceBy(scoreConfig.getWindowAdvanceInMillis());
+        final TimeWindows windows = TimeWindows.of(avgScoreConfig.getWindowSizeInMillis()).advanceBy(avgScoreConfig.getWindowAdvanceInMillis());
         final StoreBuilder<WindowStore<Long, Average>> storeBuilder = Stores.windowStoreBuilder(
-                Stores.persistentWindowStore(scoreConfig.getAveragesStoreName(), windows.maintainMs(), windows.segments, windows.size(), false),
+                Stores.persistentWindowStore(avgScoreConfig.getAverageScoreStoreName(), windows.maintainMs(), windows.segments, windows.size(), false),
                 Serdes.Long(),
                 new JsonSerde<>(Average.class)
         );
 
-        topology.addSource("scores-source", new LongDeserializer(), new ScoreSerde().deserializer(), scoreConfig.getTopic())
-                .addProcessor("scores-processor", () -> new MovingAverageProcessor(windows, scoreConfig.getAveragesStoreName()), "scores-source")
+        topology.addSource("scores-source", new LongDeserializer(), new ScoreSerde().deserializer(), avgScoreConfig.getScoreTopic())
+                .addProcessor("scores-processor", () -> new MovingAverageProcessor(windows, avgScoreConfig.getAverageScoreStoreName()), "scores-source")
                 .addStateStore(storeBuilder)
-                .connectProcessorAndStateStores("scores-processor", scoreConfig.getAveragesStoreName());
+                .connectProcessorAndStateStores("scores-processor", avgScoreConfig.getAverageScoreStoreName());
 
         LOGGER.debug("{}", topology.describe());
 

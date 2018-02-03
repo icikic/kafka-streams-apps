@@ -1,6 +1,6 @@
 package icikic.kstreams.movavg;
 
-import icikic.kstreams.movavg.config.ScoreStreamConfig;
+import icikic.kstreams.movavg.config.AverageScoreConfig;
 import icikic.kstreams.movavg.domain.Score;
 import icikic.kstreams.movavg.service.ScoreService;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -47,8 +47,8 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 @SpringBootTest(classes = AverageScoreApplication.class,
         properties = {
                 "kafka.properties.bootstrap.servers=${spring.embedded.kafka.brokers}",
-                "scores.windowSizeInSeconds=180",
-                "scores.windowAdvanceInSeconds=60",
+                "moving.average.windowSizeInSeconds=180",
+                "moving.average.windowAdvanceInSeconds=60",
         })
 @TestExecutionListeners(listeners = {
         DependencyInjectionTestExecutionListener.class,
@@ -65,7 +65,7 @@ public class MovingAverageUsingStreamsDslTest extends AbstractTestExecutionListe
     @Autowired
     private ScoreService scoreService;
     @Autowired
-    private ScoreStreamConfig scoreConfig;
+    private AverageScoreConfig scoreConfig;
     @Autowired
     private WebApplicationContext context;
 
@@ -118,7 +118,7 @@ public class MovingAverageUsingStreamsDslTest extends AbstractTestExecutionListe
         }
 
         await().atMost(5, SECONDS).until(() -> !NOT_AVAILABLE.equals(
-                scoreService.getKafkaStreams().allMetadataForStore(scoreConfig.getAveragesStoreName())));
+                scoreService.getKafkaStreams().allMetadataForStore(scoreConfig.getAverageScoreStoreName())));
 
         await().atMost(5, SECONDS).pollInterval(1, SECONDS).untilAsserted(() -> {
             // T0

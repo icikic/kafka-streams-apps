@@ -1,7 +1,7 @@
 package icikic.kstreams.movavg.topology;
 
 import icikic.kstreams.config.KafkaConfig;
-import icikic.kstreams.movavg.config.ScoreStreamConfig;
+import icikic.kstreams.movavg.config.AverageScoreConfig;
 import icikic.kstreams.movavg.domain.Average;
 import icikic.kstreams.movavg.domain.Score;
 import icikic.kstreams.serde.JsonSerde;
@@ -31,9 +31,9 @@ public class KafkaStreamsDslBuilder {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaStreamsDslBuilder.class);
 
     private final KafkaConfig kafkaConfig;
-    private final ScoreStreamConfig scoreConfig;
+    private final AverageScoreConfig scoreConfig;
 
-    public KafkaStreamsDslBuilder(final KafkaConfig kafkaConfig, final ScoreStreamConfig scoreConfig) {
+    public KafkaStreamsDslBuilder(final KafkaConfig kafkaConfig, final AverageScoreConfig scoreConfig) {
         this.kafkaConfig = kafkaConfig;
         this.scoreConfig = scoreConfig;
     }
@@ -41,7 +41,7 @@ public class KafkaStreamsDslBuilder {
     @Bean(name = "MovingAverageStream")
     public KafkaStreams buildKafkaStreams() {
         final StreamsBuilder builder = new StreamsBuilder();
-        final KStream<Long, Score> scores = builder.stream(scoreConfig.getTopic(), Consumed.with(Serdes.Long(), new JsonSerde<>(Score.class)));
+        final KStream<Long, Score> scores = builder.stream(scoreConfig.getScoreTopic(), Consumed.with(Serdes.Long(), new JsonSerde<>(Score.class)));
 
         scores.groupByKey()
                 .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(scoreConfig.getWindowSizeInSeconds()))
@@ -49,7 +49,7 @@ public class KafkaStreamsDslBuilder {
                 .aggregate(
                         Average::new,
                         (key, value, aggregate) -> aggregate.update(value),
-                        Materialized.<Long, Average, WindowStore<Bytes, byte[]>>as(scoreConfig.getAveragesStoreName())
+                        Materialized.<Long, Average, WindowStore<Bytes, byte[]>>as(scoreConfig.getAverageScoreStoreName())
                                 .withKeySerde(Serdes.Long())
                                 .withValueSerde(new JsonSerde<>(Average.class)));
 

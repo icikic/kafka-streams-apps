@@ -1,7 +1,7 @@
 package icikic.kstreams.movavg.controller;
 
 import icikic.kstreams.config.KafkaConfig;
-import icikic.kstreams.movavg.config.ScoreStreamConfig;
+import icikic.kstreams.movavg.config.AverageScoreConfig;
 import icikic.kstreams.movavg.domain.Average;
 import icikic.kstreams.movavg.domain.WindowedAverage;
 import org.apache.kafka.common.serialization.LongSerializer;
@@ -39,17 +39,17 @@ public class ScoreController {
 
     private final KafkaStreams streams;
     private final HostInfo hostInfo;
-    private final ScoreStreamConfig scoreStreamConfig;
+    private final AverageScoreConfig avgScoreConfig;
     private final RestTemplate httpClient;
 
     @Autowired
     public ScoreController(final KafkaConfig kafkaConfig,
-                           final ScoreStreamConfig scoreStreamConfig,
+                           final AverageScoreConfig avgScoreConfig,
                            @Qualifier("MovingAverageStream") final KafkaStreams streams) {
-        this.scoreStreamConfig = scoreStreamConfig;
-        this.streams           = streams;
-        this.hostInfo          = hostInfo(kafkaConfig);
-        this.httpClient        = new RestTemplate();
+        this.avgScoreConfig = avgScoreConfig;
+        this.streams        = streams;
+        this.hostInfo       = hostInfo(kafkaConfig);
+        this.httpClient     = new RestTemplate();
     }
 
     @GetMapping(value = "/all", produces = APPLICATION_JSON_UTF8_VALUE)
@@ -70,7 +70,7 @@ public class ScoreController {
             @PathVariable("player") final Long player,
             @RequestParam(value = "at", required = false) final Long atTime) {
 
-        final StreamsMetadata metadata = streams.metadataForKey(scoreStreamConfig.getAveragesStoreName(), player, new LongSerializer());
+        final StreamsMetadata metadata = streams.metadataForKey(avgScoreConfig.getAverageScoreStoreName(), player, new LongSerializer());
         final HostInfo keyOwner = metadata.hostInfo();
         if (!keyOwner.equals(this.hostInfo)) {
             final UriComponents uri = UriComponentsBuilder.fromHttpUrl("http://{host}:{port}/scores")
@@ -91,7 +91,7 @@ public class ScoreController {
     private List<WindowedAverage> fetchAveragesForAllPlayers(final long from, final long to) {
 
         final Map<Long, LinkedList<WindowedAverage>> result = new HashMap<>();
-        final ReadOnlyWindowStore<Long, Average> store = streams.store(scoreStreamConfig.getAveragesStoreName(), QueryableStoreTypes.<Long, Average>windowStore());
+        final ReadOnlyWindowStore<Long, Average> store = streams.store(avgScoreConfig.getAverageScoreStoreName(), QueryableStoreTypes.<Long, Average>windowStore());
         try (final KeyValueIterator<Windowed<Long>, Average> averages = store.fetch(0L, Long.MAX_VALUE, from, to)) {
             averages.forEachRemaining(kv -> {
                 result.computeIfAbsent(kv.key.key(), k -> new LinkedList<>()).add(
@@ -104,10 +104,10 @@ public class ScoreController {
     private WindowedAverage fetchAverageForPlayer(final Long key, long from, long to) {
 
         final LinkedList<WindowedAverage> result = new LinkedList<>();
-        final ReadOnlyWindowStore<Long, Average> store = streams.store(scoreStreamConfig.getAveragesStoreName(), QueryableStoreTypes.<Long, Average>windowStore());
+        final ReadOnlyWindowStore<Long, Average> store = streams.store(avgScoreConfig.getAverageScoreStoreName(), QueryableStoreTypes.<Long, Average>windowStore());
         try (final WindowStoreIterator<Average> averages = store.fetch(key, from, to)) {
             averages.forEachRemaining(kv -> {
-                result.add(new WindowedAverage(key, ofEpochMilli(kv.key), ofEpochMilli(kv.key).plusSeconds(scoreStreamConfig.getWindowAdvanceInMillis()), kv.value));
+                result.add(new WindowedAverage(key, ofEpochMilli(kv.key), ofEpochMilli(kv.key).plusSeconds(avgScoreConfig.getWindowAdvanceInMillis()), kv.value));
             });
         }
         return result.isEmpty() ? new WindowedAverage(key, ofEpochMilli(from), ofEpochMilli(to), ZERO) : result.getFirst();
@@ -120,13 +120,13 @@ public class ScoreController {
     }
 
     private long startTime(final long time) {
-        if (time % (scoreStreamConfig.getWindowAdvanceInMillis()) == 0) {
-            return time - scoreStreamConfig.getWindowSizeInMillis() + 1;
+        if (time % (avgScoreConfig.getWindowAdvanceInMillis()) == 0) {
+            return time - avgScoreConfig.getWindowSizeInMillis() + 1;
         }
-        return time - scoreStreamConfig.getWindowSizeInMillis();
+        return time - avgScoreConfig.getWindowSizeInMillis();
     }
 
     private long endTime(final long start) {
-        return start + scoreStreamConfig.getWindowAdvanceInMillis() - 1; // store.fetch in inclusive on both boundaries, so we'll take 1ms from end boundary
+        return start + avgScoreConfig.getWindowAdvanceInMillis() - 1; // store.fetch in inclusive on both boundaries, so we'll take 1ms from end boundary
     }
 }
