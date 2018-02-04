@@ -2,20 +2,27 @@ package icikic.kstreams.pageview.topology;
 
 import icikic.kstreams.config.KafkaConfig;
 import icikic.kstreams.pageview.config.TopPagesConfig;
-import icikic.kstreams.pageview.domain.*;
+import icikic.kstreams.pageview.domain.PageUpdate;
+import icikic.kstreams.pageview.domain.PageView;
+import icikic.kstreams.pageview.domain.PageViewStats;
+import icikic.kstreams.pageview.domain.PageViewWithContent;
 import icikic.kstreams.serde.JsonSerde;
+import icikic.kstreams.serde.ListSerde;
 import icikic.kstreams.serde.PriorityQueueSerde;
 import icikic.kstreams.serde.WindowedSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.internals.TimeWindow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -36,35 +43,38 @@ public class TopNPagesPerCountryStreamBuilder {
 
     @Bean
     public KafkaStreams topPagesStream() {
-
+        LOGGER.info("Top N pages config: {}", topNConfig);
         final StreamsBuilder builder = new StreamsBuilder();
-        final JsonSerde<PageView> pageViewSerde = new JsonSerde<>(PageView.class);
-        final JsonSerde<PageUpdate> pageUpdateSerde = new JsonSerde<>(PageUpdate.class);
-        final JsonSerde<Session> sessionSerde = new JsonSerde<>(Session.class);
+        final Serde<PageView> pageViewSerde = new JsonSerde<>(PageView.class);
+        final Serde<PageUpdate> pageUpdateSerde = new JsonSerde<>(PageUpdate.class);
+        final Serde<List<PageView>> listSerde = new ListSerde<>(pageViewSerde);
 
         final KStream<String, PageView> pageViews = builder.stream(topNConfig.getPageViewTopic(), Consumed.with(String(), pageViewSerde));
 
         // exclude burst of views, probably robots
-        final SessionWindowedKStream<String, PageView> sessions = pageViews.groupByKey()
-                .windowedBy(SessionWindows.with(TimeUnit.SECONDS.toMillis(1)));
+        long sizeMs = TimeUnit.SECONDS.toMillis(1);
+        TimeWindowedKStream<String, PageView> pvByUserWindowed = pageViews.groupByKey()
+                .windowedBy(TimeWindows.of(sizeMs).until(sizeMs));
 
-        final KTable<Windowed<String>, Session> sessionsTable = sessions
-                .aggregate(Session::new,
-                    (key, value, agg) -> agg.addPageView(value),
-                    (aggKey, aggOne, aggTwo) -> aggOne.merge(aggTwo),
-                    Materialized.with(String(), sessionSerde));
+        final KTable<Windowed<String>, List<PageView>> sessionsTable = pvByUserWindowed
+                .aggregate(ArrayList::new,
+                        (key, value, agg) -> {
+                            agg.add(value);
+                            return agg;
+                        },
+                        Materialized.with(String(), listSerde));
 
-        final KStream<String, Session> sessionStream = sessionsTable
+        final KStream<String, List<PageView>> sessionStream = sessionsTable
                 .filter((key, session) -> session.size() < topNConfig.getRequestsPerSecondThreshold())
                 .toStream((key, value) -> key.key());
 
-        final KStream<String, PageView> rapidViewsExcluded = sessionStream
+        final KStream<String, PageView> withAllowedRate = sessionStream
                 .filter((k,v) -> v != null)
-                .flatMapValues(value -> value.pageViews);
+                .flatMapValues(value -> value);
 
         final KTable<String, PageUpdate> pageUpdates = builder.table(topNConfig.getPageUpdateTopic(), Consumed.with(String(), pageUpdateSerde));
 
-        final KStream<String, PageViewWithContent> enriched = rapidViewsExcluded
+        final KStream<String, PageViewWithContent> enriched = withAllowedRate
                 .selectKey((k,v) -> v.page) // try global tables
                 .leftJoin(pageUpdates, PageViewWithContent::new,
                 Joined.with(String(), pageViewSerde, pageUpdateSerde));
@@ -73,6 +83,7 @@ public class TopNPagesPerCountryStreamBuilder {
         final KStream<String, PageViewWithContent> filteredByContentLength = enriched
                 .filter((k, v) -> v.update != null && v.update.content.length() > topNConfig.getPageSizeThreshold());
 
+        final long countingTimeBucket = TimeUnit.SECONDS.toMillis(topNConfig.getTimeBucketInSeconds());
         // group by page and country
         final KTable<Windowed<PageView>, Long> viewCounts = filteredByContentLength
                 .map((k, v) -> {
@@ -81,7 +92,7 @@ public class TopNPagesPerCountryStreamBuilder {
                 })
                 // count the clicks per preconfigured time bucket
                 .groupByKey(Serialized.with(pageViewSerde, pageViewSerde))
-                .windowedBy(TimeWindows.of(TimeUnit.SECONDS.toMillis(topNConfig.getTimeBucketInSeconds())))
+                .windowedBy(TimeWindows.of(countingTimeBucket))
                 .count();
 
         //viewCounts.toStream().print(Printed.toSysOut());

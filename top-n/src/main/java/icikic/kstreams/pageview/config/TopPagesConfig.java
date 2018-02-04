@@ -62,15 +62,24 @@ public class TopPagesConfig {
         this.timeBucketInSeconds = timeBucketInSeconds;
     }
 
-    public long getTimeBucketInMillis() {
-        return timeBucketInSeconds * 1000;
-    }
-
     public int getN() {
         return N;
     }
 
     public void setN(int n) {
         N = n;
+    }
+
+    @Override
+    public String toString() {
+        return "TopPagesConfig{" +
+                "pageViewTopic='" + pageViewTopic + '\'' +
+                ", pageUpdateTopic='" + pageUpdateTopic + '\'' +
+                ", topPagesPerCountyTopic='" + topPagesPerCountyTopic + '\'' +
+                ", requestsPerSecondThreshold=" + requestsPerSecondThreshold +
+                ", pageSizeThreshold=" + pageSizeThreshold +
+                ", timeBucketInSeconds=" + timeBucketInSeconds +
+                ", N=" + N +
+                '}';
     }
 }

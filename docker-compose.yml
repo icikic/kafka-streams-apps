@@ -82,16 +82,16 @@ services:
       restart: always
       environment:
         KAFKA_PROPERTIES_BOOTSTRAP_SERVERS: kafka:9092
-        TOPN_REQUESTS_PER_SECOND_THRESHOLD: 100
-        TOPN_PAGE_SIZE_THRESHOLD: 10
-        TOPN_TIME_BUCKET_IN_SECONDS: 30
-        TOPN_N: 5
+        TOP_N_REQUESTS_PER_SECOND_THRESHOLD: 100
+        TOP_N_PAGE_SIZE_THRESHOLD: 10
+        TOP_N_TIME_BUCKET_IN_SECONDS: 60
+        TOP_N_N: 3
       command:
         - bash
         - -c
         - |
           dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
-          sleep 20
+          sleep 30
           java -server -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -XX:MaxRAMFraction=1 -jar "/jars/top-n-standalone.jar"
       depends_on:
         - zookeeper
@@ -103,8 +103,8 @@ services:
         context: ./top-n
       hostname: pageview-generator
       environment:
-        PAGEVIEW_GENERATOR_EVENTS_PER_SECOND: 10
-        PAGEVIEW_GENERATOR_RUN_TIME_IN_SECONDS: 60
+        PAGEVIEW_GENERATOR_EVENTS_PER_SECOND: 100
+        PAGEVIEW_GENERATOR_RUN_TIME_IN_SECONDS: 180
         KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
         KAFKA_ACKS: "all"
         KAFKA_RETRIES: 0
@@ -117,21 +117,21 @@ services:
         - -c
         - |
           dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
-          sleep 20
+          sleep 30
           java -cp "/jars/top-n-standalone.jar" -Dloader.main=icikic.kstreams.pageview.producer.PageViewProducer org.springframework.boot.loader.PropertiesLauncher
       depends_on:
         - zookeeper
         - kafka
 
-  pageview-consumer:
+  top-pages-consumer:
         image: top-n:latest
         build:
           context: ./top-n
-        hostname: pageview-consumer
+        hostname: top-pages-consumer
         environment:
           KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
-          KAFKA_GROUP_ID: "top-pages-per-country"
-          KAFKA_CLIENT_ID: "top-pages-per-country-client"
+          KAFKA_GROUP_ID: "top-pages-per-country-console"
+          KAFKA_CLIENT_ID: "top-pages-per-country-console-client"
           KAFKA_AUTO_OFFSET_RESET: "earliest"
           PAGEVIEW_CONSUMER_RUN_TIME_IN_SECONDS: 3600
         command:
@@ -139,7 +139,7 @@ services:
           - -c
           - |
             dockerize -wait tcp://zookeeper:2181 -wait tcp://kafka:9092 -timeout 90s
-            sleep 20
+            sleep 30
             java -cp "/jars/top-n-standalone.jar" -Dloader.main=icikic.kstreams.pageview.consumer.TopNPagesPerCountryConsumer org.springframework.boot.loader.PropertiesLauncher
         depends_on:
           - zookeeper

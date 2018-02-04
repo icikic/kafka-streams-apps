@@ -31,6 +31,8 @@ import org.springframework.test.context.support.DependencyInjectionTestExecution
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.IntStream;
 
 import static icikic.kstreams.pageview.producer.PageViewProducer.send;
@@ -162,8 +164,9 @@ public class TopNPagesPerCountryTest extends AbstractTestExecutionListener  {
             // send page view with unknown page
             send(pvProducer, PAGE_VIEWS_TOPIC, "invalid", new PageView("/unknown", "invalid", "UK"));
             // simulate robot
+            final AtomicLong now = new AtomicLong(System.currentTimeMillis() / 1000);
             IntStream.range(0, 50).forEach(i ->
-                send(pvProducer, PAGE_VIEWS_TOPIC, "crawler", new PageView("/home", "crawler", "UK"))
+                send(pvProducer, PAGE_VIEWS_TOPIC, "crawler", new PageView("/home", "crawler", "UK"), now.incrementAndGet())
             );
         }
         return expected;
