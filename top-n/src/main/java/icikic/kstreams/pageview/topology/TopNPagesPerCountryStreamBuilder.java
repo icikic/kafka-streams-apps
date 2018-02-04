@@ -103,12 +103,13 @@ public class TopNPagesPerCountryStreamBuilder {
         final JsonSerde<PageViewStats> pageViewStatsSerde = new JsonSerde<>(PageViewStats.class);
 
         final KTable<Windowed<String>, PriorityQueue<PageViewStats>> allViewCounts = viewCounts
-                .groupBy((windowedPageView, count) -> {
-                            final Windowed<String> windowedCountry = new Windowed<>(windowedPageView.key().country, windowedPageView.window());
-                            // add the page into the value
-                            return new KeyValue<>(windowedCountry, new PageViewStats(windowedPageView.key(), count));
-                        },
-                        Serialized.with(new WindowedSerde<>(String()), pageViewStatsSerde))
+                .groupBy((windowedKey, value) -> {
+                        // group by country
+                        final Windowed<String> windowedCountry = new Windowed<>(windowedKey.key().country, windowedKey.window());
+                        // add the page into the value
+                        return new KeyValue<>(windowedCountry, new PageViewStats(windowedKey.key(), value));
+                    },
+                    Serialized.with(new WindowedSerde<>(String()), pageViewStatsSerde))
                 .aggregate(
                         () -> new PriorityQueue<>(comparator),
 
@@ -124,7 +125,7 @@ public class TopNPagesPerCountryStreamBuilder {
                             return queue;
                         },
 
-                        Materialized.with(windowedStringSerde, new PriorityQueueSerde<>(comparator, pageViewStatsSerde))
+                    Materialized.with(windowedStringSerde, new PriorityQueueSerde<>(comparator, pageViewStatsSerde))
                 );
 
         final KTable<Windowed<String>, String> topViewCounts = allViewCounts
