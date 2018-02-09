@@ -13,7 +13,6 @@ import icikic.kstreams.serde.WindowedSerde;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.kstream.internals.TimeWindow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -52,8 +51,8 @@ public class TopNPagesPerCountryStreamBuilder {
         final KStream<String, PageView> pageViews = builder.stream(topNConfig.getPageViewTopic(), Consumed.with(String(), pageViewSerde));
 
         // exclude burst of views, probably robots
-        long sizeMs = TimeUnit.SECONDS.toMillis(1);
-        TimeWindowedKStream<String, PageView> pvByUserWindowed = pageViews.groupByKey()
+        final long sizeMs = TimeUnit.SECONDS.toMillis(1);
+        final TimeWindowedKStream<String, PageView> pvByUserWindowed = pageViews.groupByKey()
                 .windowedBy(TimeWindows.of(sizeMs).until(sizeMs));
 
         final KTable<Windowed<String>, List<PageView>> sessionsTable = pvByUserWindowed
@@ -74,13 +73,13 @@ public class TopNPagesPerCountryStreamBuilder {
 
         final KTable<String, PageUpdate> pageUpdates = builder.table(topNConfig.getPageUpdateTopic(), Consumed.with(String(), pageUpdateSerde));
 
-        final KStream<String, PageViewWithContent> enriched = withAllowedRate
+        final KStream<String, PageViewWithContent> pvEnrichedWithPageContent = withAllowedRate
                 .selectKey((k,v) -> v.page) // try global tables
                 .leftJoin(pageUpdates, PageViewWithContent::new,
                 Joined.with(String(), pageViewSerde, pageUpdateSerde));
 
         // filter out page view of pages with content length < A
-        final KStream<String, PageViewWithContent> filteredByContentLength = enriched
+        final KStream<String, PageViewWithContent> filteredByContentLength = pvEnrichedWithPageContent
                 .filter((k, v) -> v.update != null && v.update.content.length() > topNConfig.getPageSizeThreshold());
 
         final long countingTimeBucket = TimeUnit.SECONDS.toMillis(topNConfig.getTimeBucketInSeconds());

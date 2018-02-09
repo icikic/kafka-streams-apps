@@ -10,23 +10,6 @@
 
 	<name>kafka-streams-apps</name>
 
-	<!--
-	<repositories>
-		<repository>
-			<id>confluent</id>
-			<url>http://packages.confluent.io/maven/</url>
-		</repository>
-	</repositories>
-
-
-	<pluginRepositories>
-		<pluginRepository>
-			<id>confluent</id>
-			<url>http://packages.confluent.io/maven/</url>
-		</pluginRepository>
-	</pluginRepositories>
-	-->
-
 	<modules>
 		<module>top-n</module>
 		<module>moving-average</module>
