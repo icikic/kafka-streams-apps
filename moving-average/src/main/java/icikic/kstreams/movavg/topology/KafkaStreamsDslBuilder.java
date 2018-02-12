@@ -38,8 +38,8 @@ public class KafkaStreamsDslBuilder {
         this.scoreConfig = scoreConfig;
     }
 
-    @Bean(name = "MovingAverageStream")
-    public KafkaStreams buildKafkaStreams() {
+    @Bean(name = "averageScoreStream")
+    public KafkaStreams averageScoreStream() {
         final StreamsBuilder builder = new StreamsBuilder();
         final KStream<Long, Score> scores = builder.stream(scoreConfig.getScoreTopic(), Consumed.with(Serdes.Long(), new JsonSerde<>(Score.class)));
 

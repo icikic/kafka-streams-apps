@@ -18,7 +18,7 @@ public class ScoreService implements KStreamsLifecycle {
     private final KafkaStreams kafkaStreams;
 
     @Autowired
-    public ScoreService(@Qualifier("MovingAverageStream") final KafkaStreams kafkaStreams) {
+    public ScoreService(@Qualifier("averageScoreStream") final KafkaStreams kafkaStreams) {
         this.kafkaStreams = kafkaStreams;
     }
 

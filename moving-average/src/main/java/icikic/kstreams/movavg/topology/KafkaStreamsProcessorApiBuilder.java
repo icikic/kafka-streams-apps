@@ -43,8 +43,8 @@ public class KafkaStreamsProcessorApiBuilder {
         this.avgScoreConfig = avgScoreConfig;
     }
 
-    @Bean(name = "MovingAverageStream")
-    public KafkaStreams buildKafkaStreams() {
+    @Bean(name = "averageScoreStream")
+    public KafkaStreams averageScoreStream() {
         final Topology topology = new Topology();
         final TimeWindows windows = TimeWindows.of(avgScoreConfig.getWindowSizeInMillis()).advanceBy(avgScoreConfig.getWindowAdvanceInMillis());
         final StoreBuilder<WindowStore<Long, Average>> storeBuilder = Stores.windowStoreBuilder(

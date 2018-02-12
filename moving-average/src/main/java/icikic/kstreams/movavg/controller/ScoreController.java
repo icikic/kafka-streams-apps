@@ -45,7 +45,7 @@ public class ScoreController {
     @Autowired
     public ScoreController(final KafkaConfig kafkaConfig,
                            final AverageScoreConfig avgScoreConfig,
-                           @Qualifier("MovingAverageStream") final KafkaStreams streams) {
+                           @Qualifier("averageScoreStream") final KafkaStreams streams) {
         this.avgScoreConfig = avgScoreConfig;
         this.streams        = streams;
         this.hostInfo       = hostInfo(kafkaConfig);
